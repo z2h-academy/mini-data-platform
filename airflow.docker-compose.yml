@@ -15,6 +15,7 @@ x-airflow-common: &airflow-common
     - ./config/airflow_container.env
     - ./config/minio.env
     - ./config/shared_database.env
+    - ./config/postgres.env
   volumes:
     - ${AIRFLOW_PROJ_DIR:-.}/dags:/opt/airflow/dags
     - ${AIRFLOW_PROJ_DIR:-.}/logs:/opt/airflow/logs
