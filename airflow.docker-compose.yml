@@ -61,6 +61,11 @@ services:
       # - ./services/postgresql/init/:/docker-entrypoint-initdb.d/
     ports:
       - 5432:5432
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "postgres"]
+      interval: 10s
+      retries: 5
+      start_period: 10s
   redis:
     image: redis:latest
     expose:
@@ -256,6 +261,26 @@ services:
     ports:
       - 5050:80
     restart: "always"
+
+  dbt:
+    build:
+      context: .
+      dockerfile: Dockerfile.dbt
+    container_name: dbt
+    profiles:
+      - nivel-4
+    volumes:
+      - ../nivel-4/dbt_project:/usr/app
+    working_dir: /usr/app
+    environment:
+      DBT_PROFILES_DIR: /usr/app
+      POSTGRES_DB: ny_taxi
+    env_file:
+      - ./config/postgres.env
+    depends_on:
+      postgres-2:
+        condition: service_healthy
+    command: ["bash", "/usr/app/scripts/init_dbt_db.sh"]
 
 volumes:
   postgres-db-volume:
