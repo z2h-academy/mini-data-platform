@@ -282,6 +282,68 @@ services:
         condition: service_healthy
     command: ["bash", "/usr/app/scripts/init_dbt_db.sh"]
 
+  # ──────────────────────────────────────────────
+  # Streaming (nivel-5)
+  # ──────────────────────────────────────────────
+  zookeeper:
+    image: zookeeper:latest
+    container_name: zookeeper
+    profiles:
+      - nivel-5
+    ports:
+      - "2181:2181"
+    restart: always
+
+  kafka:
+    image: apache/kafka:latest
+    container_name: kafka
+    profiles:
+      - nivel-5
+    depends_on:
+      - zookeeper
+    environment:
+      - KAFKA_NODE_ID=1
+      - KAFKA_PROCESS_ROLES=broker,controller
+      - KAFKA_CONTROLLER_QUORUM_VOTERS=1@kafka:9093
+      - KAFKA_LISTENERS=PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093
+      - KAFKA_ADVERTISED_LISTENERS=PLAINTEXT://localhost:9092
+      - KAFKA_LISTENER_SECURITY_PROTOCOL_MAP=PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT
+      - KAFKA_CONTROLLER_LISTENER_NAMES=CONTROLLER
+      - KAFKA_INTER_BROKER_LISTENER_NAME=PLAINTEXT
+      - KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR=1
+      - KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR=1
+      - KAFKA_TRANSACTION_STATE_LOG_MIN_ISR=1
+    ports:
+      - "9092:9092"
+    restart: always
+
+  flink-jobmanager:
+    image: flink:latest
+    container_name: flink-jobmanager
+    profiles:
+      - nivel-5
+    depends_on:
+      - kafka
+    ports:
+      - "8081:8081"
+    command: jobmanager
+    environment:
+      - JOB_MANAGER_RPC_ADDRESS=flink-jobmanager
+    restart: always
+
+  flink-taskmanager:
+    image: flink:latest
+    container_name: flink-taskmanager
+    profiles:
+      - nivel-5
+    depends_on:
+      - flink-jobmanager
+      - kafka
+    command: taskmanager
+    environment:
+      - JOB_MANAGER_RPC_ADDRESS=flink-jobmanager
+    restart: always
+
 volumes:
   postgres-db-volume:
   postgres_volume:
